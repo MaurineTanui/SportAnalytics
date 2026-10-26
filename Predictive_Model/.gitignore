@@ -1,0 +1,17 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+
+# Large files GitHub will reject (over 100 MB). Share the video by link instead.
+*.mp4
+
+# Editor and OS clutter
+.vscode/
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+~$*

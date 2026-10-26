@@ -1,0 +1,181 @@
+event_id,case_id,event_type,event_timestamp,detail
+1,1,Context Frozen,2025-06-26 00:00:00,Week 5 record
+2,2,Context Frozen,2025-06-26 00:00:00,Week 5 record
+3,3,Context Frozen,2025-06-26 00:00:00,Week 5 record
+4,4,Context Frozen,2025-06-26 00:00:00,Week 5 record
+5,5,Context Frozen,2025-06-26 00:00:00,Week 5 record
+6,6,Context Frozen,2025-06-26 00:00:00,Week 5 record
+7,7,Context Frozen,2025-06-26 00:00:00,Week 5 record
+8,8,Context Frozen,2025-06-26 00:00:00,Week 5 record
+9,9,Context Frozen,2025-06-26 00:00:00,Week 5 record
+10,10,Context Frozen,2025-06-26 00:00:00,Week 5 record
+11,11,Context Frozen,2025-06-26 00:00:00,Week 5 record
+12,12,Context Frozen,2025-06-26 00:00:00,Week 5 record
+13,13,Context Frozen,2025-06-26 00:00:00,Week 5 record
+14,14,Context Frozen,2025-06-26 00:00:00,Week 5 record
+15,15,Context Frozen,2025-06-26 00:00:00,Week 5 record
+16,16,Context Frozen,2025-06-26 00:00:00,Week 5 record
+17,17,Context Frozen,2025-06-26 00:00:00,Week 5 record
+18,18,Context Frozen,2025-06-26 00:00:00,Week 5 record
+19,19,Context Frozen,2025-06-26 00:00:00,Week 5 record
+20,20,Context Frozen,2025-06-26 00:00:00,Week 5 record
+21,21,Context Frozen,2025-06-26 00:00:00,Week 5 record
+22,22,Context Frozen,2025-06-26 00:00:00,Week 5 record
+23,23,Context Frozen,2025-06-26 00:00:00,Week 5 record
+24,24,Context Frozen,2025-06-26 00:00:00,Week 5 record
+25,25,Context Frozen,2025-06-26 00:00:00,Week 5 record
+26,26,Context Frozen,2025-06-26 00:00:00,Week 5 record
+27,27,Context Frozen,2025-06-26 00:00:00,Week 5 record
+28,28,Context Frozen,2025-06-26 00:00:00,Week 5 record
+29,29,Context Frozen,2025-06-26 00:00:00,Week 5 record
+30,30,Context Frozen,2025-06-26 00:00:00,Week 5 record
+31,31,Context Frozen,2026-06-26 00:00:00,Week 5 record
+32,32,Context Frozen,2026-06-26 00:00:00,Week 5 record
+33,33,Context Frozen,2026-06-26 00:00:00,Week 5 record
+34,34,Context Frozen,2026-06-26 00:00:00,Week 5 record
+35,35,Context Frozen,2026-06-26 00:00:00,Week 5 record
+36,36,Context Frozen,2026-06-26 00:00:00,Week 5 record
+37,37,Context Frozen,2026-06-26 00:00:00,Week 5 record
+38,38,Context Frozen,2026-06-26 00:00:00,Week 5 record
+39,39,Context Frozen,2026-06-26 00:00:00,Week 5 record
+40,40,Context Frozen,2026-06-26 00:00:00,Week 5 record
+41,41,Context Frozen,2026-06-26 00:00:00,Week 5 record
+42,42,Context Frozen,2026-06-26 00:00:00,Week 5 record
+43,43,Context Frozen,2026-06-26 00:00:00,Week 5 record
+44,44,Context Frozen,2026-06-26 00:00:00,Week 5 record
+45,45,Context Frozen,2026-06-26 00:00:00,Week 5 record
+46,46,Context Frozen,2026-06-26 00:00:00,Week 5 record
+47,47,Context Frozen,2026-06-26 00:00:00,Week 5 record
+48,48,Context Frozen,2026-06-26 00:00:00,Week 5 record
+49,49,Context Frozen,2026-06-26 00:00:00,Week 5 record
+50,50,Context Frozen,2026-06-26 00:00:00,Week 5 record
+51,51,Context Frozen,2026-06-26 00:00:00,Week 5 record
+52,52,Context Frozen,2026-06-26 00:00:00,Week 5 record
+53,53,Context Frozen,2026-06-26 00:00:00,Week 5 record
+54,54,Context Frozen,2026-06-26 00:00:00,Week 5 record
+55,55,Context Frozen,2026-06-26 00:00:00,Week 5 record
+56,56,Context Frozen,2026-06-26 00:00:00,Week 5 record
+57,57,Context Frozen,2026-06-26 00:00:00,Week 5 record
+58,58,Context Frozen,2026-06-26 00:00:00,Week 5 record
+59,59,Context Frozen,2026-06-26 00:00:00,Week 5 record
+60,60,Context Frozen,2026-06-26 00:00:00,Week 5 record
+61,1,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 1: REJECT
+62,2,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 2: EXCLUDED
+63,3,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 3: REJECT
+64,4,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 4: REJECT
+65,5,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 5: REJECT
+66,6,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 6: REJECT
+67,7,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 7: REJECT
+68,8,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 8: REJECT
+69,9,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 9: REJECT
+70,10,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 10: EXCLUDED
+71,11,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 11: REJECT
+72,12,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 12: MONITOR
+73,13,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 13: EXCLUDED
+74,14,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 14: MONITOR
+75,15,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 15: REJECT
+76,16,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 16: MONITOR
+77,17,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 17: REJECT
+78,18,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 18: REJECT
+79,19,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 19: REJECT
+80,20,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 20: REJECT
+81,21,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 21: REJECT
+82,22,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 22: REJECT
+83,23,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 23: EXCLUDED
+84,24,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 24: REJECT
+85,25,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 25: MONITOR
+86,26,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 26: REJECT
+87,27,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 27: REJECT
+88,28,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 28: SHORTLIST
+89,29,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 29: MONITOR
+90,30,PREDICTION_RUN,2025-06-21 00:00:00,derived from prediction_run 30: MONITOR
+91,31,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 31: REJECT
+92,32,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 32: REJECT
+93,33,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 33: MONITOR
+94,34,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 34: REJECT
+95,35,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 35: REJECT
+96,36,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 36: REJECT
+97,37,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 37: REJECT
+98,38,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 38: REJECT
+99,39,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 39: REJECT
+100,40,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 40: REJECT
+101,41,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 41: REJECT
+102,42,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 42: MONITOR
+103,43,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 43: REJECT
+104,44,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 44: MONITOR
+105,45,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 45: REJECT
+106,46,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 46: EXCLUDED
+107,47,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 47: REJECT
+108,48,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 48: REJECT
+109,49,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 49: MONITOR
+110,50,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 50: MONITOR
+111,51,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 51: REJECT
+112,52,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 52: REJECT
+113,53,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 53: REJECT
+114,54,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 54: REJECT
+115,55,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 55: REJECT
+116,56,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 56: REJECT
+117,57,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 57: REJECT
+118,58,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 58: SHORTLIST
+119,59,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 59: MONITOR
+120,60,PREDICTION_RUN,2026-06-21 00:00:00,derived from prediction_run 60: MONITOR
+121,1,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 1: Bid
+122,2,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 2: Bid
+123,3,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 3: Reject
+124,4,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 4: Bid
+125,5,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 5: Bid
+126,6,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 6: Monitor
+127,7,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 7: Bid
+128,8,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 8: Bid
+129,9,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 9: Bid
+130,10,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 10: Bid
+131,11,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 11: Reject
+132,12,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 12: Reject
+133,13,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 13: Bid
+134,14,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 14: Bid
+135,15,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 15: Monitor
+136,16,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 16: Bid
+137,17,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 17: Reject
+138,18,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 18: Reject
+139,19,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 19: Reject
+140,20,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 20: Reject
+141,21,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 21: Bid
+142,22,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 22: Bid
+143,23,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 23: Reject
+144,24,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 24: Monitor
+145,25,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 25: Reject
+146,26,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 26: Bid
+147,27,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 27: Monitor
+148,28,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 28: Bid
+149,29,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 29: Bid
+150,30,DECISION_RECORDED,2025-06-26 00:00:00,derived from transfer_decision 30: Bid
+151,31,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 31: Bid
+152,32,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 32: Monitor
+153,33,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 33: Reject
+154,34,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 34: Monitor
+155,35,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 35: Bid
+156,36,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 36: Monitor
+157,37,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 37: Reject
+158,38,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 38: Reject
+159,39,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 39: Bid
+160,40,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 40: Bid
+161,41,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 41: Bid
+162,42,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 42: Monitor
+163,43,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 43: Reject
+164,44,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 44: Reject
+165,45,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 45: Monitor
+166,46,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 46: Bid
+167,47,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 47: Bid
+168,48,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 48: Monitor
+169,49,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 49: Bid
+170,50,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 50: Bid
+171,51,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 51: Bid
+172,52,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 52: Bid
+173,53,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 53: Bid
+174,54,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 54: Bid
+175,55,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 55: Bid
+176,56,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 56: Monitor
+177,57,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 57: Bid
+178,58,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 58: Reject
+179,59,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 59: Reject
+180,60,DECISION_RECORDED,2026-06-26 00:00:00,derived from transfer_decision 60: Reject

@@ -1,0 +1,31 @@
+check_id,category,check,result,details
+1,Raw data,The 12 Week 5 raw files are present and unchanged (SHA-256),PASS,12 of 12 files match the Week 5 submission
+2,Schema,All 12 final tables contain the Week 5 columns plus the Week 6 fields,PASS,12 of 12 tables complete; all Week 5 columns kept
+3,Data types,"IDs are integers, money and stat fields numeric, all dates parse",PASS,"all ID, numeric and date columns valid"
+4,Data types,minutes_played stored as whole numbers,PASS,dtype int64
+5,Uniqueness,Primary key unique in every table,PASS,duplicate keys: 0 across 12 tables
+6,Uniqueness,Natural keys unique (one row per intended grain),PASS,"stats (player, season): 0; valuation (player, date): 0; prediction_run per case: 0; decision_context per case: 0; decision per context: 0; outcome per decision: 0; case (player, need): 0"
+7,Referential integrity,All 16 foreign keys (incl. withheld outcomes) point to an existing row,PASS,orphans found: 0
+8,Referential integrity,decision_context.run_id belongs to the same case,PASS,0 mismatches
+9,Range,"Stats, ages, money values and scores inside valid ranges",PASS,minutes outside 0-3420: 0; passes outside 0-150: 0; carries outside 0-60: 0; player under 16 in stats: 0; market value <= 0: 0; asking price <= 0: 0; TSS outside 0-100: 0; RAPF outside 0-100: 0; FMV <= 0: 0
+10,Logical consistency,Every contract ends after it starts,PASS,0 invalid contracts
+11,Logical consistency,Cases with no contract active at the run date are flagged and get no contract discount,PASS,14 cases flagged (contract starts after or ended before the run)
+12,Logical consistency,Valuations become available after the valuation date,PASS,0 rows wrong
+13,Logical consistency,Outcome identity holds in final transfer_outcome,PASS,17 rows checked
+14,Logical consistency,Outcome identity holds in withheld validation outcomes,PASS,30 rows checked
+15,Logical consistency,Decision is made after the prediction run,PASS,60 cases checked
+16,Logical consistency,Frozen snapshot equals the prediction_run values,PASS,0 mismatches
+17,Missingness,Missing values only in fields where missing is allowed,PASS,no unexpected missing values
+18,Missingness,Share of missing carries_p90 is reported and handled by the data-gap rule,PASS,20.6% of season rows missing carries_p90; 15 cases flagged as data gap
+19,Temporal integrity,Every stat and valuation used was available before the prediction run,PASS,0 violations
+20,Temporal integrity,Metric script never reads withheld outcomes,PASS,04_compute_metrics.py has no reference to data/withheld
+21,Temporal integrity,No validation outcome appears in the final transfer_outcome table,PASS,0 validation outcomes found in final data
+22,Metric computation,"TSS, FMV and RAPF computed for every eligible case without a data gap",PASS,42 eligible cases with complete data; 13 flagged as data gap
+23,Metric computation,Screening status re-computed independently matches,PASS,0 mismatches in 60 cases
+24,Metric computation,Recommended bid action re-computed from premium matches,PASS,2 shortlisted cases checked
+25,Grain,"One prediction_run, one decision_context and one transfer_decision per scouting case",PASS,"cases 60, runs 60, contexts 60, decisions 60"
+26,Grain,"30 validation cases, each with exactly one withheld outcome",PASS,"30 cases, 30 outcomes"
+27,Calibration,"Median market value equals the EUR 275,000 target (within 1%)",PASS,"median = EUR 275,000 (Week 5: EUR 136,428)"
+28,Calibration,Outfield passes_p90 mean equals the 45 target (within 2%),PASS,mean = 45.0 (Week 5: 23.9)
+29,Calibration,Passes calibration keeps every row's rank order,PASS,rank order identical before and after
+30,Calibration,One money factor applied to all valuations,PASS,factor = 2.0157

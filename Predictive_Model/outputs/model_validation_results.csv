@@ -1,0 +1,33 @@
+check_id,category,check,result,details
+1,Grain,One row per player per forecast origin,PASS,"747 rows, 0 duplicates"
+2,Grain,Every player with a valuation in the origin year has a row,PASS,"2023: 166, 2024: 186, 2025: 195, 2026: 200"
+3,Referential integrity,Every player_id exists in the player table,PASS,200 players
+4,Temporal integrity,Every predictor was available before the forecast origin,PASS,valuations too late: 0; stats too late: 0
+5,Temporal integrity,Every target is dated after the forecast origin,PASS,earliest gap: 194 days
+6,Temporal integrity,Origins 2025 and 2026 equal the dates of the two prediction runs,PASS,"['2025-06-21', '2026-06-21']"
+7,Temporal integrity,The backtest model only learned from outcomes known before June 2025,PASS,latest development target: 2025-01-01
+8,Temporal integrity,The final model only learned from outcomes known before June 2026,PASS,latest target used: 2026-01-01
+9,Temporal integrity,Model code and application never read the withheld validation outcomes,PASS,"no reference to data/withheld in steps 07-08, value_model.py or app.py"
+10,Predictors,"Current, previous and next value match valuation_history",PASS,747 rows compared
+11,Predictors,age_at_origin matches date_of_birth,PASS,ages 16.5 to 34.9
+12,Predictors,"momentum_log is log(value / previous value), and 0 without history",PASS,"547 rows with history, 200 without"
+13,Target,log_change equals log(target value / current value),PASS,547 rows
+14,Missingness,"Target present for all development and backtest rows, absent for live rows",PASS,"development 352, backtest 195, live 200"
+15,Missingness,No missing value in a predictor the model uses,PASS,"market_value_eur, age_at_origin, momentum_log complete"
+16,Range,"Values positive, ages 16 to 36, yearly change within a plausible range",PASS,largest yearly change: x4.2
+17,Model,Refitting from the model table reproduces the saved coefficients,PASS,"20 coefficients, 547 rows"
+18,Model,Coefficients match an independent statsmodels weighted least squares fit,PASS,largest difference: 1.44e-07
+19,Model,The chosen model has the lowest cross-validation error of its family,PASS,"Age-curve regression, point every 1 year(s), with momentum: CV RMSE 0.2122"
+20,Model,The chosen model beats both baselines in cross-validation and in the backtest,PASS,backtest median error 12.1% vs 22.6% (best baseline)
+21,Uncertainty,Intervals are ordered (95% low < 80% low < forecast < 80% high < 95% high): backtest forecasts,PASS,195 rows
+22,Uncertainty,Intervals are ordered (95% low < 80% low < forecast < 80% high < 95% high): live forecasts,PASS,200 rows
+23,Uncertainty,Intervals are ordered (95% low < 80% low < forecast < 80% high < 95% high): case forecasts,PASS,60 rows
+24,Uncertainty,The confidence interval is always narrower than the prediction interval,PASS,200 live forecasts
+25,Uncertainty,Backtest coverage of the 80% and 95% intervals is within 7 points of the level,PASS,80% interval covered 80.0%; 95% interval covered 91.8%
+26,Uncertainty,Standardised backtest errors have a spread close to 1 (ages seen in training),PASS,"standard deviation 0.92, 184 players"
+27,Uncertainty,"Probabilities are between 0 and 1, fall as the price rises, and match the price-for-confidence values",PASS,probability at the central forecast is 50%
+28,Application data,The saved model reproduces the stored live forecasts (same code as the what-if screen),PASS,200 forecasts compared
+29,Application data,One live forecast per player with a 2026 valuation,PASS,200 players
+30,Application data,One forecast per scouting case,PASS,60 cases
+31,Application data,Summer 2025 cases use the model that existed in June 2025 (no hindsight),PASS,30 cases match the backtest forecasts
+32,Application data,Forecasts outside the ages seen in training are flagged,PASS,live: 11 flagged; backtest: 11 flagged (training ages 16.5 to 33.9)

@@ -1,0 +1,41 @@
+{
+ "chosen_model": "Age-curve regression, point every 1 year(s), with momentum",
+ "knot_step_years": 1,
+ "target": "market value at the next yearly valuation",
+ "development_rows": 352,
+ "development_players": 186,
+ "cv_rmse_log": 0.2122,
+ "cv_coverage_80": 79.3,
+ "cv_coverage_95": 95.5,
+ "backtest": {
+  "players": 195.0,
+  "median_abs_pct_error": 12.059,
+  "within_20_pct": 72.308,
+  "rmse_log": 0.277,
+  "bias_log": 0.057,
+  "r2_change": 0.675,
+  "coverage_80": 80.0,
+  "coverage_95": 91.795,
+  "median_pi80_low_pct": -22.207,
+  "median_pi80_high_pct": 28.547,
+  "no_change_median_abs_pct_error": 28.609,
+  "no_change_rmse_log": 0.488,
+  "week6_rule_median_abs_pct_error": 22.582,
+  "week6_rule_rmse_log": 0.438,
+  "week6_range_coverage": 28.718,
+  "extrapolated_players": 11.0,
+  "median_abs_pct_error_seen_ages": 11.065,
+  "coverage_80_seen_ages": 84.783
+ },
+ "final_model": {
+  "rows": 547,
+  "parameters": 20,
+  "age_min": 16.48,
+  "age_max": 33.93,
+  "residual_sd_log_with_history": 0.1802,
+  "residual_sd_log_no_history": 0.2285,
+  "momentum_coefficient": -0.3315
+ },
+ "live_forecasts": 200,
+ "case_forecasts": 60
+}

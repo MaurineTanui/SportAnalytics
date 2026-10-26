@@ -1,0 +1,14 @@
+table,step,rule,rows_affected
+player_season_stats,invalid values,minutes_played had decimals (e.g. 2935.29); rounded to whole minutes,800
+player_season_stats,invalid values,rows for players younger than 16 at season start removed (youngest was 13),75
+player_season_stats,invalid values,passes_p90 above 150 (impossible) set to missing,3
+player_season_stats,invalid values,carries_p90 above 60 (impossible) set to missing,3
+player_season_stats,calibration,"passes_p90 mapped by rank to a log-normal shape (outfield mean 45, goalkeeper mean 27); Week 5 value kept in passes_p90_week5",722
+player_season_stats,derived variable,"age_at_season_start, carries_missing_flag, passes_missing_flag added",725
+valuation_history,invalid values,valuations for players younger than 16 removed,53
+valuation_history,calibration,"market_value_eur multiplied by 2.0157 so the median is EUR 275,000; Week 5 value kept in market_value_eur_week5",747
+contract,calibration,annual_wage_eur multiplied by the same money factor (2.0157),200
+prediction_run,calibration,Week 5 predicted_fmv_eur multiplied by the money factor,60
+prediction_run,invalid values,Week 5 predicted_fmv_eur equal to 0 flagged; replaced by the recalculated FMV in step 4,2
+decision_context,calibration,Week 5 snapshot_predicted_fmv_eur multiplied by the money factor,60
+transfer_outcome,calibration,money fields multiplied by the money factor; realized_value_change_eur recalculated so the identity holds exactly,17
