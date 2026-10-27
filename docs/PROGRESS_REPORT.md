@@ -2,7 +2,7 @@
 
 **Project:** Football Recruitment Decision-Support Tool
 **Decision-maker:** Head of Recruitment
-**Demo video:** _[add link here]_
+**Demo video:** _[https://drive.google.com/file/d/1eAtxHtjyRHl4TRQ-IGda_nTP2IAdxchk/view?usp=sharing]_
 
 ## Done so far
 
