@@ -1,4 +1,4 @@
-# Synthetic Recruitment Database (draft v0.1)
+# Synthetic Recruitment Database (draft v1)
 
 **Organization:** mid-table club in a top European league
 **Decision-maker:** Head of Recruitment
