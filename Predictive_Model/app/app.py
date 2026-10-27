@@ -4,12 +4,16 @@ Football Recruitment Decision-Support Tool - application prototype.
 Run from the project folder (the one containing README.txt):   streamlit run app/app.py
 
 Screens
-  1. Candidates         the screening result for one squad need (Week 6 rules) with the value forecast added
-  2. Forecast accuracy  how well the value forecast model predicted values it had not seen (backtest)
-  3. What-if forecast   change a player's predictors and the asking price; the model re-predicts with its uncertainty
+  1. Candidates           the screening result for one squad need (Week 6 rules) with both KPI forecasts added
+  2. KPIs and models      what each KPI measures, why it matters, its predictors and why its algorithm was chosen
+  3. Forecast accuracy    how well each model predicted outcomes it had not seen (backtests)
+  4. Explain a forecast   overall predictor importance vs. the contributions to one player's forecast (SHAP)
+  5. What-if analysis     change a player's predictors; the model re-predicts against a clearly marked baseline and
+                          writes a summary of every scenario
 
-The app only reads data/final/, data/model/ and outputs/. It predicts with code/value_model.py, the same code
-that was tested in steps 08 and 09.
+KPI 1  Market value at the next yearly valuation   code/value_model.py        (steps 07-09)
+KPI 2  Passes per 90 minutes next season           code/performance_model.py  (step 10)
+The app only reads data/final/, data/model/ and outputs/. It predicts with the same model code that was tested.
 """
 import json
 import sys
@@ -24,6 +28,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "code"))
 import config as C  # noqa: E402
 from value_model import ValueForecastModel, interval, point, price_for_confidence, prob_at_least  # noqa: E402
+import performance_model as PM  # noqa: E402
+from explain import (NOT_CAUSAL, VALUE_PREDICTORS, ValueExplainer, pct_effect, perf_sentences, perf_summary,  # noqa: E402
+                     value_sentences, value_summary)
 
 # ------------------------------------------------------------------ colours (one validated palette, light surface)
 BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"
@@ -52,9 +59,17 @@ def load():
         "by_age": pd.read_csv(o / "model_backtest_by_age.csv"),
         "checks": pd.read_csv(o / "model_validation_results.csv"),
         "summary": json.loads((o / "model_summary.json").read_text()),
+        "vt": pd.read_csv(m / "value_model_table.csv"),
+        "pt": pd.read_csv(m / "performance_model_table.csv"),
+        "pcf": pd.read_csv(m / "case_performance_forecast.csv"),
+        "pbp": pd.read_csv(m / "performance_backtest_predictions.csv"),
+        "pcv": pd.read_csv(o / "performance_model_cv.csv"),
+        "psum": json.loads((o / "performance_summary.json").read_text()),
+        "pjson": json.loads((m / "performance_model.json").read_text()),
     }
     cases = d["case"].merge(d["run"].drop(columns=["player_id", "asking_price_eur"]), on="case_id") \
         .merge(d["cf"].drop(columns=["player_id", "run_id", "asking_price_eur", "screening_status"]), on="case_id")
+    cases = cases.merge(d["pcf"][["case_id", "perf_forecast", "perf_lo80", "perf_hi80", "actual_passes_p90"]], on="case_id", how="left")
     cases["status_rank"] = cases.screening_status.map({s: i for i, s in enumerate(STATUS_ORDER)})
     d["cases"] = cases.sort_values(["status_rank", "tactical_score", "risk_forecast"], ascending=[True, False, False])
     return d
@@ -66,8 +81,27 @@ def load_models():
     return {C.BACKTEST_ORIGIN: read("value_model_june2025.json"), C.LIVE_ORIGIN: read("value_model.json")}
 
 
+@st.cache_resource
+def load_perf_models():
+    """KPI 2 models, refitted from the saved training table exactly as step 10 fitted them (same rows, order and seed)."""
+    t, j = D["pt"], D["pjson"]
+    dev, bt = t[t.split == "development"].reset_index(drop=True), t[t.split == "backtest"].reset_index(drop=True)
+    return {C.BACKTEST_ORIGIN: PM.PerformanceForecastModel(j["name"], j["params"]).fit(dev, j["resid_quantiles_june2025"]),
+            C.LIVE_ORIGIN: PM.PerformanceForecastModel(j["name"], j["params"]).fit(pd.concat([dev, bt], ignore_index=True),
+                                                                                 j["resid_quantiles_final"])}
+
+
+@st.cache_resource
+def load_value_explainers():
+    vt = D["vt"]
+    return {C.BACKTEST_ORIGIN: ValueExplainer(MODELS[C.BACKTEST_ORIGIN], vt[vt.split == "development"]),
+            C.LIVE_ORIGIN: ValueExplainer(MODELS[C.LIVE_ORIGIN], vt[vt.split != "live"])}
+
+
 D, MODELS = load(), load_models()
+PMODELS, VEX = load_perf_models(), load_value_explainers()
 BT = D["summary"]["backtest"]
+PBT = D["psum"]["backtest"]
 
 
 # ------------------------------------------------------------------ helpers
@@ -146,8 +180,9 @@ def screen_candidates():
     cases = D["cases"][D["cases"].need_id == nd.need_id]
     target_year = int(cases.target_value_date.iloc[0][:4])
     st.title("Candidates")
-    st.caption(f"Screening result for {nd.need_code} ({nd.position_code}, {nd.target_window}) under the Week 6 rules, with the "
-               f"value forecast for January {target_year} added. Prediction run: {cases.run_timestamp.iloc[0][:10]}.")
+    st.caption(f"Screening result for {nd.need_code} ({nd.position_code}, {nd.target_window}) under the Week 6 rules, with the two KPI "
+               f"forecasts added: market value in January {target_year} (KPI 1) and passes per 90 next season (KPI 2). "
+               f"Prediction run: {cases.run_timestamp.iloc[0][:10]}.")
 
     counts = cases.screening_status.value_counts()
     cols = st.columns(5)
@@ -169,7 +204,9 @@ def screen_candidates():
         "Value now": view.market_value_eur, "Asking price": view.asking_price_eur, fc: view.forecast_eur,
         "80% range": [f"{eur(a)} to {eur(b)}" for a, b in zip(view.pi80_low_eur, view.pi80_high_eur)],
         "Chance fee holds": 100 * view.prob_value_at_least_ask,
-        "Premium (Week 6)": view.week6_premium_pct, "Reason for status": view.status_reason,
+        "Premium (Week 6)": view.week6_premium_pct,
+        "Passes/90 forecast": view.perf_forecast, "vs target style": view.perf_forecast - nd.target_passes_p90,
+        "Reason for status": view.status_reason,
     })
     money = st.column_config.NumberColumn(format="euro", step=1, width="small")
     score = st.column_config.NumberColumn(format="%.0f", width="small")
@@ -182,6 +219,10 @@ def screen_candidates():
         column_config={"Case": st.column_config.NumberColumn(width="small"), "Age": st.column_config.NumberColumn(format="%.1f", width="small"),
                        "Value now": money, "Asking price": money, fc: money, "TSS": score, "RAPF": score,
                        "Risk": st.column_config.TextColumn(width="small"),
+                       "Passes/90 forecast": st.column_config.NumberColumn(format="%.1f", width="small",
+                                                                           help="KPI 2: forecast passes per 90 minutes next season."),
+                       "vs target style": st.column_config.NumberColumn(format="%+.1f", width="small",
+                                                                        help=f"KPI 2 forecast minus the need's target style ({nd.target_passes_p90:.0f} passes per 90)."),
                        "Premium (Week 6)": st.column_config.NumberColumn(format="%+.0f%%", width="small",
                                                                          help="Asking price against the Week 6 fair market value."),
                        "Chance fee holds": st.column_config.ProgressColumn(format="%.0f%%", min_value=0, max_value=100, width="small")})
@@ -214,8 +255,16 @@ def screen_candidates():
 
 # ====================================================================== screen 2: forecast accuracy
 def screen_accuracy():
-    bp, s = D["bp"], D["summary"]
     st.title("Forecast accuracy")
+    t1, t2 = st.tabs(["KPI 1 · Market value next year", "KPI 2 · Passes per 90 next season"])
+    with t1:
+        accuracy_value()
+    with t2:
+        accuracy_perf()
+
+
+def accuracy_value():
+    bp, s = D["bp"], D["summary"]
     st.markdown(
         f"The value forecast model predicts a player's **market value at the next yearly valuation**, from his value now, "
         f"his value a year ago and his age. This screen shows how far it can be trusted. The test: the model was fitted on "
@@ -369,12 +418,24 @@ NEW = 0
 
 
 def screen_whatif():
+    st.title("What-if analysis")
+    st.caption("Change a player's predictors and the model re-predicts. The **baseline** is always the forecast from the player's "
+               "recorded values, so you can compare it with your scenario. Every scenario gets an automatic summary and is added "
+               "to the scenario log. These are model-based scenarios, not guaranteed effects of real-world changes.")
+    t1, t2 = st.tabs(["KPI 1 · Market value next year", "KPI 2 · Passes per 90 next season"])
+    with t1:
+        whatif_value()
+    with t2:
+        whatif_perf()
+    scenario_log()
+
+
+def whatif_value():
     nd = NEED
     cases = D["cases"][D["cases"].need_id == nd.need_id].set_index("case_id")
     year = int(cases.origin_year.iloc[0])
     model = MODELS[year]
     target = f"January {year + 1}"
-    st.title("What-if forecast")
     st.caption(f"Change the predictors or the asking price and the model re-predicts the value at the {target} valuation, with its "
                f"uncertainty. Model fitted on {model.n} past forecasts, ages {model.age_min:.1f} to {model.age_max:.1f}.")
 
@@ -484,6 +545,31 @@ def screen_whatif():
         fig.update_yaxes(showgrid=False, tickfont=dict(color=INK2), categoryorder="array", categoryarray=[n for n, _ in rows][::-1])
         show(fig)
 
+        # ---- automatic summary, contributions and log (KPI 1)
+        vex = VEX[year]
+        def v_inputs(i):
+            return {"Market value now": eur(i["value"]), "Market value one year ago": eur(i["prev"]) if i["hist"] else "no earlier valuation",
+                    "Age": f"{i['age']:.1f}", "Asking price": eur(i["ask"])}
+        cur_in = {"value": s.wi_value, "prev": s.wi_prev, "hist": s.wi_hist, "age": s.wi_age, "ask": s.wi_ask}
+        act_now, _, _ = bid_rule(s.wi_ask, now["forecast"], nd.budget_allocated_eur)
+        extras = {"action": act_now,
+                  "range_split": bid_rule(s.wi_ask, now["lo80"], nd.budget_allocated_eur)[0] != bid_rule(s.wi_ask, now["hi80"], nd.budget_allocated_eur)[0]}
+        if base is not None:
+            extras["base_action"] = bid_rule(base_in["ask"], base["forecast"], nd.budget_allocated_eur)[0]
+            extras["action_changed"] = changed and extras["base_action"] != act_now
+        player = "a new player" if cid == NEW else f"Player {cases.loc[cid].player_id} (case {cid})"
+        summary = value_summary(player, v_inputs(cur_in), v_inputs(base_in) if cid != NEW else None, now, base, eur, extras)
+        scenario_box("KPI 1", player, summary, v_inputs(cur_in))
+
+        c_now = vex.contributions(s.wi_value, s.wi_age, s.wi_prev if s.wi_hist else None)
+        c_base = vex.contributions(base_in["value"], base_in["age"], base_in["prev"] if base_in["hist"] else None) if cid != NEW else None
+        st.markdown("**Why the model gives this forecast: predictor contributions**")
+        st.caption(f"Each bar is how much one predictor moves this forecast away from the forecast for an average player in the training "
+                   f"data ({eur(vex.base_eur)}), in %. The effects multiply: {eur(vex.base_eur)} × all effects = {eur(now['forecast'])}. "
+                   "Grey = baseline (recorded values), blue = what-if.")
+        contrib_chart(VALUE_PREDICTORS, None if (c_base is None or not moved) else pct_effect(c_base).values, pct_effect(c_now).values,
+                      "Effect on the forecast (%)", "%+.0f%%")
+
         # ---- decision reading
         a, b = st.columns([1.25, 1])
         with a:
@@ -557,11 +643,368 @@ def screen_whatif():
             st.dataframe(tab, width="stretch")
 
 
+# ====================================================================== shared: contributions chart, summary box, log
+def contrib_chart(names, base_vals, now_vals, xtitle, fmt):
+    """Horizontal bars of predictor contributions. base_vals None -> one series."""
+    fig = go.Figure()
+    order = list(np.array(names)[np.argsort(np.abs(now_vals))])
+    if base_vals is not None:
+        fig.add_trace(go.Bar(y=names, x=base_vals, orientation="h", name="Baseline", marker=dict(color=GREY, cornerradius=3),
+                             text=[fmt % v for v in base_vals], textposition="outside", textfont=dict(color=INK2),
+                             hovertemplate="Baseline · %{y}: %{x:+.1f}<extra></extra>"))
+    fig.add_trace(go.Bar(y=names, x=now_vals, orientation="h", name="What-if" if base_vals is not None else "This forecast",
+                         marker=dict(color=[BLUE if v >= 0 else ORANGE for v in now_vals], cornerradius=3),
+                         text=[fmt % v for v in now_vals], textposition="outside", textfont=dict(color=INK2),
+                         hovertemplate="%{y}: %{x:+.1f}<extra></extra>"))
+    fig.add_vline(x=0, line=dict(color=AXIS, width=1))
+    lim = max(1e-6, np.max(np.abs(np.concatenate([now_vals, base_vals if base_vals is not None else []])))) * 1.6
+    style(fig, height=70 + 46 * len(names) * (2 if base_vals is not None else 1), xtitle=xtitle, legend=base_vals is not None)
+    fig.update_layout(barmode="group", bargap=0.25)
+    fig.update_xaxes(range=[-lim, lim])
+    fig.update_yaxes(showgrid=False, tickfont=dict(color=INK2), categoryorder="array", categoryarray=order)
+    show(fig)
+
+
+def scenario_box(kpi, player, summary, inputs):
+    """Show the automatic summary and add it to the scenario log when the scenario is new."""
+    st.markdown("**Automatic scenario summary**")
+    with st.container(border=True):
+        st.markdown(summary)
+    log = st.session_state.setdefault("scenario_log", [])
+    key = (kpi, player, tuple(inputs.items()))
+    if not any(e["key"] == key for e in log[-20:]):
+        log.append({"key": key, "time": pd.Timestamp.now().strftime("%H:%M:%S"), "kpi": kpi, "player": player, "summary": summary})
+
+
+def scenario_log():
+    log = st.session_state.get("scenario_log", [])
+    with st.expander(f"Scenario log ({len(log)} run{'s' if len(log) != 1 else ''} this session)"):
+        if not log:
+            st.caption("No scenarios yet.")
+            return
+        text = "\n\n---\n\n".join(f"### {e['time']} · {e['kpi']} · {e['player']}\n\n{e['summary']}" for e in log)
+        st.download_button("Download the log (Markdown)", text, file_name="what_if_scenarios.md")
+        for e in reversed(log[-10:]):
+            st.markdown(f"**{e['time']} · {e['kpi']} · {e['player']}**")
+            st.markdown(e["summary"])
+            st.divider()
+
+
+# ====================================================================== screen 2: KPIs and models
+def screen_kpis():
+    st.title("KPIs and models")
+    st.caption("The decision-maker is the club's Head of Recruitment. The tool supports one question: should we bid for this "
+               "player, and up to what price?")
+    a, b = st.columns(2, gap="large")
+    with a:
+        with st.container(border=True):
+            st.subheader("KPI 1 · Market value at the next yearly valuation")
+            st.markdown(
+                "**Measures:** the player's market value (EUR) about 12 months after the transfer window.\n\n"
+                "**Why it matters:** a fee is paid today but judged later. If the player's value stays above the fee, the club "
+                "keeps an asset it can sell; if it falls, the fee is a loss. This protects financial sustainability and sets the "
+                "maximum bid.\n\n"
+                "**Predictors:** market value now (sets the level), age (values rise for young players and fall after the late "
+                "twenties), change in value over the last year (part of a rise or fall tends to reverse).\n\n"
+                f"**Algorithm:** linear regression on the log scale with a piecewise age curve. Chosen from {len(D['cv'])} candidates "
+                "by cross-validation. Values are skewed and errors proportional, which the log scale handles; there are only "
+                "547 player-years, so a small model is safer; and the regression gives honest prediction ranges. Random forest and "
+                "gradient boosting were no more accurate at the ages they had seen.")
+    with b:
+        with st.container(border=True):
+            st.subheader("KPI 2 · Passes per 90 minutes next season")
+            st.markdown(
+                f"**Measures:** how many passes per 90 minutes the player will make next season.\n\n"
+                f"**Why it matters:** the squad need defines the target playing style in passes per 90 ({NEED.target_passes_p90:.0f} "
+                "for this need). Screening measures fit on past seasons; this KPI asks whether the player will still fit when he "
+                "plays for us. A signing who falls short of the style is an operational failure even at a fair price.\n\n"
+                "**Predictors:** passes per 90 last season and the season before (form carries over, partly), carries per 90 "
+                "(involvement on the ball), minutes played (how reliable the per-90 figures are), age and position (typical "
+                "volumes differ).\n\n"
+                f"**Algorithm:** {D['psum']['chosen_model'].lower()} (depth {D['psum']['params']['max_depth']}, "
+                f"{D['psum']['params']['n_estimators']} trees). It had the lowest cross-validated error of "
+                f"{(D['pcv'].family == 'learned').sum()} settings across ridge regression, random forest and gradient boosting. "
+                "Passing depends on age and position in non-linear ways (it peaks in the mid-twenties and goalkeepers are far "
+                "lower), which shallow trees capture without hand-built terms, and SHAP explains each prediction exactly.")
+    st.info("A third candidate KPI, minutes played next season (availability), was tested and dropped: no predictor in the data "
+            "was related to it (all correlations about 0), so a model could not beat the average.", icon=":material/info:")
+
+
+# ====================================================================== screen 3b: accuracy, KPI 2
+def accuracy_perf():
+    pb, cv = D["pbp"], D["pcv"]
+    st.markdown(f"Fitted on the 2023 and 2024 seasons, then asked to forecast the **2025 season of {PBT['players']} players** "
+                "before it was played.")
+    k = st.columns(4)
+    k[0].metric("Typical error", f"{PBT['mae']:.1f} passes/90", help="Mean absolute error in the backtest.")
+    k[0].caption(f"Same as last season: {PBT['no_change_mae']:.1f}")
+    k[1].metric("Variation explained (R²)", f"{PBT['r2']:.2f}")
+    k[2].metric("80% range contained actual", f"{PBT['coverage_80']:.0f}%")
+    k[2].caption("Target: 80%")
+    k[3].metric("95% range contained actual", f"{PBT['coverage_95']:.0f}%")
+    k[3].caption("Target: 95%")
+    left, right = st.columns(2)
+    with left:
+        st.subheader("Forecast against actual")
+        fig = go.Figure()
+        lim = [0, max(pb.forecast.max(), pb.target_passes_p90.max()) * 1.05]
+        fig.add_trace(go.Scatter(x=lim, y=lim, mode="lines", line=dict(color=AXIS, width=1), hoverinfo="skip", showlegend=False))
+        for name, mask, colour in [("Inside the 80% range", pb.inside_pi80 == 1, BLUE), ("Outside", pb.inside_pi80 == 0, ORANGE)]:
+            g = pb[mask]
+            fig.add_trace(go.Scatter(x=g.forecast, y=g.target_passes_p90, mode="markers", name=f"{name} ({len(g)})",
+                                     marker=dict(color=colour, size=8, line=dict(color=SURFACE, width=1.5)),
+                                     customdata=np.column_stack([g.player_id, g.position, g.age.round(1)]),
+                                     hovertemplate="Player %{customdata[0]} (%{customdata[1]}, %{customdata[2]})<br>Forecast %{x:.1f}"
+                                                   "<br>Actual %{y:.1f}<extra></extra>"))
+        style(fig, height=380, xtitle="Forecast passes per 90 (2025)", ytitle="Actual passes per 90 (2025)")
+        show(fig)
+    with right:
+        st.subheader("Why this model")
+        c = cv.copy()
+        c["label"] = [m + ("" if not p or p != p else " " + ", ".join(f"{k}={v}" for k, v in json.loads(p).items())) +
+                      (" (chosen)" if ch else "") for m, p, ch in zip(c.model, c.params, c.chosen)]
+        c = c.sort_values("cv_rmse", ascending=False)
+        fig = go.Figure(go.Bar(y=c.label, x=c.cv_rmse, orientation="h", width=0.6,
+                               marker=dict(color=[BLUE if ch else GREY for ch in c.chosen], cornerradius=3),
+                               text=[f"{v:.1f}" for v in c.cv_rmse], textposition="outside", textfont=dict(color=INK2),
+                               hovertemplate="%{y}<br>CV RMSE %{x:.2f}<extra></extra>"))
+        style(fig, height=22 * len(c) + 80, xtitle="Cross-validation RMSE (passes per 90, lower is better)", legend=False)
+        fig.update_xaxes(range=[0, c.cv_rmse.max() * 1.15])
+        fig.update_yaxes(showgrid=False, tickfont=dict(color=INK2, size=11))
+        show(fig)
+    st.caption("Passing volume is hard to forecast: even the best model leaves a typical error of about 9 passes per 90, so read "
+               "the 80% range, not only the central forecast.")
+
+
+# ====================================================================== screen 4: explain a forecast
+def screen_explain():
+    nd = NEED
+    cases = D["cases"][D["cases"].need_id == nd.need_id].set_index("case_id")
+    year = int(cases.origin_year.iloc[0])
+    st.title("Explain a forecast")
+    st.caption("**Overall importance** (left) shows how much each predictor moves forecasts across all players. **Contributions** "
+               "(right) show how each predictor moved one player's forecast, and in which direction.")
+    labels = {f"Case {cid} · Player {r.player_id} · {r.screening_status.capitalize()}": cid for cid, r in cases.iterrows()}
+    pick = st.selectbox("Player", list(labels), key="ex_player")
+    cid = labels[pick]
+    r = cases.loc[cid]
+    t1, t2 = st.tabs(["KPI 1 · Market value next year", "KPI 2 · Passes per 90 next season"])
+
+    with t1:
+        vex = VEX[year]
+        prev = float(r.prev_value_eur) if r.has_history else None
+        c = vex.contributions(float(r.market_value_eur), float(r.age_at_origin), prev)
+        fc = float(np.exp(vex.base_log + c.sum()))
+        imp = vex.global_importance()
+        left, right = st.columns(2, gap="large")
+        with left:
+            st.subheader("Overall importance · all players")
+            fig = go.Figure(go.Bar(y=imp.predictor, x=imp.typical_pct, orientation="h", width=0.55, marker=dict(color=GREY, cornerradius=3),
+                                   text=[f"±{v:.0f}%" for v in imp.typical_pct], textposition="outside", textfont=dict(color=INK2),
+                                   hovertemplate="%{y}: typical effect ±%{x:.0f}%<extra></extra>"))
+            style(fig, height=220, xtitle="Typical effect on a forecast (%)", legend=False)
+            fig.update_xaxes(range=[0, imp.typical_pct.max() * 1.3])
+            fig.update_yaxes(showgrid=False, autorange="reversed", tickfont=dict(color=INK2))
+            show(fig)
+            st.caption("Value now dominates because players' values differ up to a hundredfold; it sets the level. Age and last "
+                       "year's change decide how the value moves from there.")
+        with right:
+            st.subheader(f"Contributions · Player {r.player_id}")
+            contrib_chart(VALUE_PREDICTORS, None, pct_effect(c).values, "Effect on this forecast (%)", "%+.0f%%")
+            st.caption(f"Average training player {eur(vex.base_eur)} × these effects = **{eur(fc)}** forecast for Player {r.player_id}.")
+        chg = f"{100 * (r.market_value_eur / r.prev_value_eur - 1):+.0f}%" if r.has_history else "no earlier valuation"
+        st.markdown("**What the contributions mean**")
+        for line in value_sentences(c, {"Market value now": eur(r.market_value_eur), "Age": f"{r.age_at_origin:.1f}",
+                                        "Change in value over the last year": chg}, vex):
+            st.markdown("- " + line)
+        st.info(NOT_CAUSAL, icon=":material/info:")
+
+    with t2:
+        pm = PMODELS[year]
+        pc = D["pcf"].set_index("case_id")
+        if cid not in pc.index or pd.isna(pc.loc[cid].perf_forecast):
+            st.warning("This player has no completed season before the run, so there is no performance forecast to explain.")
+        else:
+            p = pc.loc[cid]
+            x = PM.row(p.passes_last, p.passes_before, bool(p.has_before), p.carries_last, p.minutes_last, p.age, p.position)
+            sv, base_v = pm.shap_values(x)
+            sv = sv.iloc[0]
+            imp = pm.global_importance()
+            left, right = st.columns(2, gap="large")
+            with left:
+                st.subheader("Overall importance · all players")
+                fig = go.Figure(go.Bar(y=imp.predictor, x=imp.mean_abs_shap, orientation="h", width=0.55,
+                                       marker=dict(color=GREY, cornerradius=3), text=[f"±{v:.1f}" for v in imp.mean_abs_shap],
+                                       textposition="outside", textfont=dict(color=INK2),
+                                       hovertemplate="%{y}: mean |SHAP| %{x:.2f} passes/90<extra></extra>"))
+                style(fig, height=300, xtitle="Mean |SHAP value| (passes per 90)", legend=False)
+                fig.update_xaxes(range=[0, imp.mean_abs_shap.max() * 1.2])
+                fig.update_yaxes(showgrid=False, autorange="reversed", tickfont=dict(color=INK2))
+                show(fig)
+            with right:
+                st.subheader(f"Contributions · Player {r.player_id}")
+                contrib_chart(list(sv.index), None, sv.values, "SHAP value (passes per 90)", "%+.1f")
+                st.caption(f"Average forecast {base_v:.1f} + these contributions = **{base_v + sv.sum():.1f}** passes per 90.")
+            st.subheader("How the model uses one predictor across all players")
+            grp = st.selectbox("Predictor", list(PM.GROUPS)[:5] + ["Position"], key="ex_dep")
+            bg = pm.background
+            bsv, _ = pm.shap_values(bg)
+            xval = bg[PM.GROUPS[grp][0]] if grp != "Position" else pd.Series(
+                np.array(PM.POSITIONS)[bg[[f"pos_{q}" for q in PM.POSITIONS]].values.argmax(1)], index=bg.index)
+            fig = go.Figure(go.Scatter(x=xval, y=bsv[grp], mode="markers", marker=dict(color=BLUE, size=6, opacity=0.55),
+                                       hovertemplate="%{x}<br>SHAP %{y:+.1f}<extra></extra>", name="Training players"))
+            this_x = {"Passes per 90, last season": p.passes_last, "Passes per 90, season before": p.passes_before,
+                      "Carries per 90, last season": p.carries_last, "Minutes played, last season": p.minutes_last,
+                      "Age": p.age, "Position": p.position}[grp]
+            fig.add_trace(go.Scatter(x=[this_x], y=[sv[grp]], mode="markers", name=f"Player {r.player_id}",
+                                     marker=dict(color=ORANGE, size=13, symbol="diamond", line=dict(color=SURFACE, width=2))))
+            fig.add_hline(y=0, line=dict(color=AXIS, width=1))
+            style(fig, height=300, xtitle=grp, ytitle="SHAP value (passes per 90)")
+            show(fig)
+            st.caption("Each dot is one training player. Above zero, the predictor pushed that forecast up.")
+            st.markdown("**What the contributions mean**")
+            ins = {"Passes per 90, last season": f"{p.passes_last:.1f}",
+                   "Passes per 90, season before": f"{p.passes_before:.1f}" if p.has_before else "no earlier season",
+                   "Carries per 90, last season": f"{p.carries_last:.1f}" + (" (estimated, missing)" if p.carries_missing else ""),
+                   "Minutes played, last season": f"{p.minutes_last:,.0f}", "Age": f"{p.age:.1f}", "Position": p.position}
+            for line in perf_sentences(sv, ins):
+                st.markdown("- " + line)
+            st.info(NOT_CAUSAL, icon=":material/info:")
+
+
+# ====================================================================== screen 5b: what-if, KPI 2
+def whatif_perf():
+    nd = NEED
+    cases = D["cases"][D["cases"].need_id == nd.need_id].set_index("case_id")
+    year = int(cases.origin_year.iloc[0])
+    pm = PMODELS[year]
+    pc = D["pcf"].set_index("case_id")
+    tgt = float(nd.target_passes_p90)
+    st.caption(f"Forecast of passes per 90 in the {year}/{str(year + 1)[2:]} season. Model fitted on {pm.n} player-seasons, "
+               f"ages {pm.age_min:.1f} to {pm.age_max:.1f}. Target style for {nd.need_code}: {tgt:.0f} passes per 90.")
+    ids = {"New player (enter the values yourself)": NEW}
+    ids.update({f"Case {cid} · Player {r.player_id} · {r.screening_status.capitalize()}": int(cid) for cid, r in cases.iterrows()
+                if cid in pc.index and pd.notna(pc.loc[cid].perf_forecast)})
+    if st.session_state.get("pw_label") not in ids:
+        st.session_state.pw_label = list(ids)[1] if len(ids) > 1 else list(ids)[0]
+
+    def recorded(cid):
+        if cid == NEW:
+            return {"passes": 45.0, "before": 42.0, "hist": True, "carries": 10.0, "minutes": 2000, "age": 24.0, "pos": "MID"}
+        p = pc.loc[cid]
+        return {"passes": round(float(p.passes_last), 1), "before": round(float(p.passes_before), 1), "hist": bool(p.has_before),
+                "carries": round(float(p.carries_last), 1), "minutes": int(p.minutes_last), "age": round(float(p.age), 1), "pos": p.position}
+
+    def reset():
+        for k, v in recorded(ids[st.session_state.pw_label]).items():
+            st.session_state[f"pw_{k}"] = v
+
+    if st.session_state.get("pw_loaded") != st.session_state.pw_label:
+        reset()
+        st.session_state.pw_loaded = st.session_state.pw_label
+
+    inp, out = st.columns([1, 2.7], gap="large")
+    with inp:
+        st.selectbox("Start from", list(ids), key="pw_label")
+        cid = ids[st.session_state.pw_label]
+        base_in = recorded(cid)
+        st.number_input("Passes per 90, last season", 0.0, 150.0, step=1.0, format="%.1f", key="pw_passes")
+        st.toggle("Player has an earlier season", key="pw_hist")
+        st.number_input("Passes per 90, season before", 0.0, 150.0, step=1.0, format="%.1f", key="pw_before",
+                        disabled=not st.session_state.pw_hist)
+        st.number_input("Carries per 90, last season", 0.0, 60.0, step=0.5, format="%.1f", key="pw_carries")
+        st.slider("Minutes played, last season", 0, 3420, step=30, key="pw_minutes")
+        st.slider("Age next season", 16.0, 36.0, step=0.1, format="%.1f", key="pw_age")
+        st.selectbox("Position", PM.POSITIONS, key="pw_pos")
+        st.button("Reset to the recorded values", on_click=reset, disabled=cid == NEW, key="pw_reset")
+
+    s = st.session_state
+    cur = {k: s[f"pw_{k}"] for k in base_in}
+
+    def run(i):
+        x = PM.row(i["passes"], i["before"], i["hist"], i["carries"], i["minutes"], i["age"], i["pos"])
+        f = pm.predict_frame(x).iloc[0].to_dict()
+        f["p_target"] = pm.prob_at_least(f["forecast"], tgt)
+        f["shap"], f["base"] = pm.shap_values(x)
+        return f
+
+    now = run(cur)
+    base = run(base_in) if cid != NEW else None
+    changed = cid != NEW and cur != base_in
+
+    with out:
+        if now["extrapolated"]:
+            st.error(f"Age {cur['age']:.1f} is outside the training ages ({pm.age_min:.1f} to {pm.age_max:.1f}). Do not rely on this forecast.",
+                     icon=":material/error:")
+        k = st.columns(3)
+        dlt = lambda key, fmt, small: (fmt(now[key] - base[key]) if changed and abs(now[key] - base[key]) >= small else None)
+        k[0].metric("Forecast passes per 90", f"{now['forecast']:.1f}", dlt("forecast", lambda d: f"{d:+.1f}", 0.05))
+        k[1].metric("80% prediction range", f"{now['lo80']:.1f} to {now['hi80']:.1f}")
+        k[2].metric(f"Chance of reaching {tgt:.0f}", f"{100 * now['p_target']:.0f}%", dlt("p_target", lambda d: f"{100 * d:+.0f} pts", 0.005))
+
+        rows = ([("Baseline (recorded)", base)] if changed else []) + [("What-if" if changed else "Baseline (recorded)" if cid != NEW else "Forecast", now)]
+        fig = go.Figure()
+        for i, (name, f) in enumerate(rows):
+            fig.add_trace(go.Scatter(x=[f["lo95"], f["hi95"]], y=[name, name], mode="lines", line=dict(color=BAND_95, width=18),
+                                     name="95% range", showlegend=i == 0, hoverinfo="skip"))
+            fig.add_trace(go.Scatter(x=[f["lo80"], f["hi80"]], y=[name, name], mode="lines", line=dict(color=BAND_80, width=18),
+                                     name="80% range", showlegend=i == 0, hoverinfo="skip"))
+            fig.add_trace(go.Scatter(x=[f["forecast"]], y=[name], mode="markers", name="Forecast", showlegend=i == 0,
+                                     marker=dict(color=BLUE if name != "Baseline (recorded)" or not changed else GREY, size=13,
+                                                 line=dict(color=SURFACE, width=2)),
+                                     hovertemplate=f"{name}: {f['forecast']:.1f} (80% {f['lo80']:.1f} to {f['hi80']:.1f})<extra></extra>"))
+        fig.add_vline(x=tgt, line=dict(color=ORANGE, width=2))
+        fig.add_trace(go.Scatter(x=[tgt] * len(rows), y=[n for n, _ in rows], mode="markers", name="Target style",
+                                 marker=dict(color=ORANGE, size=9, symbol="square"), hovertemplate=f"Target style {tgt:.0f}<extra></extra>"))
+        style(fig, height=150 + 50 * len(rows), xtitle="Passes per 90 next season")
+        fig.update_yaxes(showgrid=False, tickfont=dict(color=INK2), categoryorder="array", categoryarray=[n for n, _ in rows][::-1])
+        show(fig)
+
+        def p_inputs(i):
+            return {"Passes/90 last season": f"{i['passes']:.1f}", "Passes/90 season before": f"{i['before']:.1f}" if i["hist"] else "none",
+                    "Carries/90": f"{i['carries']:.1f}", "Minutes": f"{i['minutes']:,}", "Age": f"{i['age']:.1f}", "Position": i["pos"]}
+        player = "a new player" if cid == NEW else f"Player {cases.loc[cid].player_id} (case {cid})"
+        extras = {"p_target": now["p_target"], "base_p_target": base["p_target"] if base else None, "mae": PBT["mae"]}
+        summary = perf_summary(player, p_inputs(cur), p_inputs(base_in) if cid != NEW else None, now, base, tgt, extras)
+        scenario_box("KPI 2", player, summary, p_inputs(cur))
+
+        st.markdown("**Why the model gives this forecast: SHAP contributions**")
+        st.caption(f"Each bar adds to or takes from the average forecast ({now['base']:.1f}). They sum to the forecast. "
+                   "Grey = baseline, blue/orange = what-if.")
+        sv_now = now["shap"].iloc[0]
+        contrib_chart(list(sv_now.index), base["shap"].iloc[0].values if changed else None, sv_now.values,
+                      "SHAP value (passes per 90)", "%+.1f")
+
+        st.markdown("**How the forecast responds to one predictor**")
+        vary = st.radio("Vary", ["Passes per 90, last season", "Age", "Minutes played, last season"], horizontal=True,
+                        label_visibility="collapsed", key="pw_vary")
+        key, rng = {"Passes per 90, last season": ("passes", np.linspace(10, 100, 61)), "Age": ("age", np.linspace(16, 36, 61)),
+                    "Minutes played, last season": ("minutes", np.linspace(300, 3420, 61))}[vary]
+        xs = pd.concat([PM.row(**{**{"passes_last": cur["passes"], "passes_before": cur["before"], "has_before": cur["hist"],
+                                     "carries_last": cur["carries"], "minutes_last": cur["minutes"], "age": cur["age"],
+                                     "position": cur["pos"]}, {"passes": "passes_last", "age": "age", "minutes": "minutes_last"}[key]: v})
+                        for v in rng], ignore_index=True)
+        pf = pm.predict_frame(xs)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=np.concatenate([rng, rng[::-1]]), y=np.concatenate([pf.hi80, pf.lo80[::-1]]), fill="toself",
+                                 fillcolor=BAND_80, line=dict(width=0), name="80% range", hoverinfo="skip"))
+        fig.add_trace(go.Scatter(x=rng, y=pf.forecast, mode="lines", line=dict(color=BLUE, width=2), name="Forecast",
+                                 hovertemplate="%{x:.1f}: %{y:.1f}<extra></extra>"))
+        fig.add_hline(y=tgt, line=dict(color=ORANGE, width=2))
+        fig.add_trace(go.Scatter(x=[cur[key]], y=[now["forecast"]], mode="markers", name="Current setting",
+                                 marker=dict(color=BLUE, size=11, line=dict(color=SURFACE, width=2)), hoverinfo="skip"))
+        style(fig, height=300, xtitle=vary, ytitle="Passes per 90 next season")
+        show(fig)
+        st.caption("The orange line is the target style. Flat stretches are normal: a tree model predicts in steps.")
+
+
 # ====================================================================== navigation
 PAGE_CANDIDATES = st.Page(screen_candidates, title="1. Candidates", url_path="candidates", default=True)
-PAGE_ACCURACY = st.Page(screen_accuracy, title="2. Forecast accuracy", url_path="forecast-accuracy")
-PAGE_WHATIF = st.Page(screen_whatif, title="3. What-if forecast", url_path="what-if")
-page = st.navigation([PAGE_CANDIDATES, PAGE_ACCURACY, PAGE_WHATIF])
+PAGE_KPIS = st.Page(screen_kpis, title="2. KPIs and models", url_path="kpis")
+PAGE_ACCURACY = st.Page(screen_accuracy, title="3. Forecast accuracy", url_path="forecast-accuracy")
+PAGE_EXPLAIN = st.Page(screen_explain, title="4. Explain a forecast", url_path="explain")
+PAGE_WHATIF = st.Page(screen_whatif, title="5. What-if analysis", url_path="what-if")
+page = st.navigation([PAGE_CANDIDATES, PAGE_KPIS, PAGE_ACCURACY, PAGE_EXPLAIN, PAGE_WHATIF])
 st.sidebar.markdown("### Football recruitment decision support")
 NEED = need_picker()
 page.run()
